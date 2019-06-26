@@ -1,0 +1,1 @@
+A secure android webview application. On first run it will ask for a client certificate file that will be imported to internal storage. It will be used for authentication while browsing the server site.
