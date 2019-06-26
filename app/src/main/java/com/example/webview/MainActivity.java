@@ -2,14 +2,19 @@ package com.example.webview;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.net.http.SslError;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.webkit.ClientCertRequest;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.EditText;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,6 +34,8 @@ import static android.content.ContentValues.TAG;
 public class MainActivity extends Activity {
     private WebView mWebView;
     private String certFileName = "client.cert";
+    private String serverURL;
+    private String serverProperty = "serverURL";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -39,16 +46,47 @@ public class MainActivity extends Activity {
         mWebView = findViewById(R.id.activity_main_webview);
         mWebView.setWebViewClient(new MyWebViewClient());
         mWebView.getSettings().setJavaScriptEnabled(true);
-        mWebView.loadUrl("file:///android_asset/index.html");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // load server url
+        serverURL = getSharedPreferences("default", MODE_PRIVATE).getString(serverProperty, null);
+        if (serverURL == null) {
+            // ask user for url
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("URL");
+            // Set up the input
+            final EditText input = new EditText(this);
+            // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
+            input.setInputType(InputType.TYPE_CLASS_TEXT);
+            builder.setView(input);
+            // Set up the buttons
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    serverURL = input.getText().toString();
+                    // save property
+                    SharedPreferences.Editor editor = getSharedPreferences("default", MODE_PRIVATE).edit();
+                    editor.putString(serverProperty, serverURL);
+                    editor.apply();
+                }
+            });
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
+            // show dialog
+            builder.show();
+        }
         // load certificate if it does not exist
         File certFile = new File(getFilesDir(), certFileName);
         if (!certFile.exists()) {
-            new FileChooser(this).setFileListener(new FileChooser.FileSelectedListener() {
+            // ask user to select cert file
+            FileChooser certChooser = new FileChooser(this).setFileListener(new FileChooser.FileSelectedListener() {
                 @Override
                 public void fileSelected(final File file) {
                     try {
@@ -65,12 +103,15 @@ public class MainActivity extends Activity {
                         out.close();
                     } catch (Exception x) {
                         Log.e(TAG, x.getMessage());
-                        x.printStackTrace();
                     }
-
                 }
-            }).showDialog();
+            });
+            // show dialog
+            certChooser.setExtension("p12");
+            certChooser.showDialog();
         }
+        // open link
+        mWebView.loadUrl(serverURL);
     }
 
     class MyWebViewClient extends WebViewClient {
