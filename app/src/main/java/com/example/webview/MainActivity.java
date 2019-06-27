@@ -34,7 +34,8 @@ import static android.content.ContentValues.TAG;
 public class MainActivity extends Activity {
     private WebView mWebView;
     private String certFileName = "client.cert";
-    private String serverURL;
+    private String localURL = "file:///android_asset/index.html";
+    private String serverURL = localURL;
     private String serverProperty = "serverURL";
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -52,8 +53,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         // load server url
-        serverURL = getSharedPreferences("default", MODE_PRIVATE).getString(serverProperty, null);
-        if (serverURL == null) {
+        serverURL = getSharedPreferences("default", MODE_PRIVATE).getString(serverProperty, localURL);
+        if (serverURL.equals(localURL)) {
             // ask user for url
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("URL");
@@ -112,6 +113,8 @@ public class MainActivity extends Activity {
         }
         // open link
         mWebView.loadUrl(serverURL);
+        // force reload page
+        mWebView.reload();
     }
 
     class MyWebViewClient extends WebViewClient {
